@@ -1,6 +1,5 @@
-README
-======
+Project 1
+=========
 
-This change is made in sydman branch
-
-This change is also made in sydman branch.
+This is the README for Project 1.
+This is a change.
