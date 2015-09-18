@@ -11,22 +11,22 @@ Calculate all basis functions N^k_i(u)
 
 
 import numpy as np
-import scipy as sp
 import matplotlib.pyplot as plt
+import scipy as sp
 
 
 class Splines(object):
     def __init__(self, knots, dvalues):  # grid = u? se slide 11
-        self.n = len(knots)
-        self.m = len(dvalues)
-        self.p = self.m - self.n - 1
-        self.knots = knots
+        # self.n = len(knots)
+        # self.m = len(dvalues)
+        # self.p = self.m - self.n - 1
+        # self.knots = knots
 
-        # self.degree = 3
-        # self.nbr_ds = len(dvalues)
-        # self.u_max  = self.degree + self.nbr_ds  # + 1?
-        # self.us     = np.arange(self.u_max + 1)  # i st. u?
-        # self.ds     = dvalues
+        self.degree = 3
+        self.nbr_ds = len(dvalues)
+        self.u_max  = self.degree + self.nbr_ds  # + 1?
+        self.us     = np.arange(self.u_max + 1)  # i st. u?
+        self.ds     = dvalues
 
     def __call__(self, u, *args, **kwargs):
         """
@@ -41,16 +41,17 @@ class Splines(object):
         pass
 
     def N0(self, i, x):
-        if (self.knots[i] <= x < self.knots[i+1]):
-            return 1
-        else:
-            return 0
+        # if (self.knots[i] <= x < self.knots[i+1]):
+        #     return 1
+        # else:
+        #     return 0
+        return (i <= x) * (x < i + 1);
 
     def N(self, i, x, n):
         if n == 0:
             return self.N0(i, x)
-        else:
-            us = self.knots
+        else: 
+            us = self.us
             c1 = (x - us[i]) / (us[i + n] - us[i])
             c2 = (us[i + n + 1] - x) / (us[i + n + 1] - us[i + 1])
             return c1 * self.N(i, x, n - 1) + c2 * self.N(i + 1, x, n - 1)
@@ -60,8 +61,8 @@ class Splines(object):
             if (i, 0) not in memo:
                 memo[(i, 0)] = self.N0(i,x)
             return memo
-        else: 
-            if (i, n) in memo:  # needed?
+        else:
+            if (i, n) in memo: #needed?
                 return
 
             us = self.us
@@ -70,9 +71,8 @@ class Splines(object):
 
             if (i, n - 1) not in memo:
                 memo = self.N2(i, x, n - 1, memo)
-
-            memo = self.N2(i + 1, x, n - 1, memo)
-            memo[(i, n)] = c1 * memo[(i, n - 1)] + c2 * memo[(i + 1, n - 1)]
+            memo         = self.N2(i + 1, x, n - 1, memo)
+            memo[(i, n)]     = c1 * memo[(i, n - 1)] + c2 * memo[(i + 1, n - 1)]
 
             return memo
 
@@ -98,9 +98,10 @@ class Splines(object):
 
     def d(self, i, x, n):
         if n == 0:
-            return self.ds[:, i]
+            return self.ds[i, :]
         else:
             us = self.us
+            x = x.reshape(len(x), 1)
             a = (x - us[i]) / (us[i + self.degree + 1 - n] - us[i])
             return (1 - a) * self.d(i - 1, x , n - 1) + a * self.d(i, x, n - 1)
 
@@ -117,32 +118,41 @@ def memoize(f):
 
 
 def main():
-
     plt.close("all")
-
     ds = np.array([
-        [-20,   10],
-        [-50,   20],
-        [-25,    5],
-        [-100, -15],
-        [-25,  -65]
-    ]).T
+            [ -20,     10],
+            [ -20,     10],
+            [ -20,     10],
+            [ -50,     20],
+            [ -25,      5],
+            [-100,    -15],
+            [ -25,    -65],
+            [  10,    -80],
+            [  60,    -30],
+            [  10,     20],
+            [  20,      0],
+            [  40,     20],
+            [  40,     20],
+            [  40,     20]])
+    print("Shape of ds: %s" % (ds.shape,))
 
-    print(ds)
+    s = Splines(np.arange(5), ds)
 
-    knots = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8])
-    s = Splines(knots, ds)
+    # test d
+    plt.figure()
+    plt.plot(ds[:, 0], ds[:, 1])
 
-    x = np.linspace(0, 5, 100)
-    # plt.scatter(ds[0, :], ds[1, :])
-    N0 = s.N(0, x, 3)
-    N1 = s.N(1, x, 3)
-    N2 = s.N(2, x, 3)
-    N3 = s.N(3, x, 3)
-    plt.plot(x, N0)
-    # plt.plot(x, N1)
-    # plt.plot(x, N2)
-    # plt.plot(x, N3)
+    I = np.arange(3, 14)
+    I_len = len(I)
+
+    for i in I:
+        x = np.linspace(i, i + 1, 100)
+        # p = min(i, 3)
+        p = 3
+        # p = min((i, 3, I_len - i))
+        print("i = %s, Running bloom for degree: %s" % (i, p))
+        points = s.d(i, x, p)
+        plt.plot(points[:, 0], points[:, 1], '*')
 
     plt.show()
 
