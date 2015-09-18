@@ -139,7 +139,14 @@ def main():
     x = np.linspace(0,5,100)
     fig = plt.figure()
     # plt.scatter(ds[0, :], ds[1, :])
-    plt.plot(x, s.N(1, x, 3))
+    N0 = s.N(0, x, 3)
+    N1 = s.N(1, x, 3)
+    N2 = s.N(2, x, 3)
+    N3 = s.N(3, x, 3)
+    plt.plot(x, N0)
+    plt.plot(x, N1)
+    plt.plot(x, N2)
+    plt.plot(x, N3)
 
     # plot(x, s.N2(1,x,3,{})[(0,3)])
     # memo = {}
