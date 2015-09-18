@@ -94,9 +94,10 @@ class Splines(object):
 
 	def d(self, i, x, n):
 		if n == 0:
-			return self.ds[:,i]
+			return self.ds[i,:]
 		else:
 			us = self.us
+			x = x.reshape(len(x),1)
 			a = (x - us[i]) / (us[i + self.degree + 1 - n] - us[i])
 			return (1 - a) * self.d(i - 1, x , n - 1) + a * self.d(i, x, n - 1)
 
@@ -110,13 +111,18 @@ def memoize(f):
 	return helper
 
 close("all")
-ds = array([	[-20,   10],
-		[-50,   20],
-		[-25,    5],
-		[-100, -15],
-		[-25,  -65]])
-s = Splines(np.arange(5), ds.transpose())
-x = linspace(0,5,100)
+ds = array([	[ -20,	 10],
+		[ -50,	 20],
+		[ -25, 	  5],
+		[-100,	-15],
+		[ -25,	-65],
+		[  10,	-80],
+		[  60, 	-30],
+		[  10,	 20],
+		[  20, 	  0],
+		[  40,	 20]])
+s = Splines(np.arange(5), ds)
+x = linspace(0,5,100) # reshape here?
 plot(x, s.N(1,x,3))
 #plot(x, s.N2(1,x,3,{})[(0,3)])
 #memo = {}
@@ -137,3 +143,16 @@ all(t1 == t2) * all(t1 == t3)
 """
 
 # test d
+figure()
+plot(ds[:,0], ds[:,1])
+
+I = arange(1, 10)
+I_len = len(I)
+
+for i in I:
+	x = linspace(i, i + 1 ,100)
+	p = min(i, 3)
+	#p = min(min(i, 3), I_len - i - 2)
+	points = s.d(i, x, p)
+	print("i = {}, p = {}, I_len - i = {}".format(i, p, I_len - i - 1))
+	plot(points[:,0],points[:,1], '*')
