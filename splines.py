@@ -22,6 +22,7 @@ class Splines(object):
 		self.nbr_ds 	= len(dvalues)
 		self.u_max 	= self.degree + self.nbr_ds # + 1?
 		self.us 	= np.arange(self.u_max + 1) # i st. u?
+		self.ds		= dvalues
 
 
     	def __call__(self, u, *args, **kwargs):
@@ -56,14 +57,16 @@ class Splines(object):
 				memo[(i, 0)] = self.N0(i,x)
 			return memo
 		else: 
+			if (i, n) in memo: #needed?
+				return
+
 			us = self.us
 			c1 = (x - us[i]) / (us[i + n] - us[i])
 			c2 = (us[i + n + 1] - x) / (us[i + n + 1] - us[i + 1])
 
 			if (i, n - 1) not in memo:
 				memo = self.N2(i, x, n - 1, memo)
-				#memo[(i, n - 1)] = self.N2(i, x, n - 1, memo)
-			#memo[(i + 1, n - 1)] = self.N2(i + 1, x, n - 1, memo)
+
 			memo 		= self.N2(i + 1, x, n - 1, memo)
 			memo[(i, n)] 	= c1 * memo[(i, n - 1)] + c2 * memo[(i + 1, n - 1)]
 
@@ -75,10 +78,10 @@ class Splines(object):
 				memo[(i, 0)] = self.N0(i,x)
 			return 
 		else: 
-			if (i, n) in memo:
+			if (i, n) in memo: #needed?
 				return
 
-			us = self.us
+			us = self.us # reference or copy??
 			c1 = (x - us[i]) / (us[i + n] - us[i])
 			c2 = (us[i + n + 1] - x) / (us[i + n + 1] - us[i + 1])
 
@@ -89,20 +92,14 @@ class Splines(object):
 			memo[(i, n)] = c1 * memo[(i, n - 1)] + c2 * memo[(i + 1, n - 1)]
 			return 
 
+	def d(self, i, x, n):
+		if n == 0:
+			return self.ds[:,i]
+		else:
+			us = self.us
+			a = (x - us[i]) / (us[i + self.degree + 1 - n] - us[i])
+			return (1 - a) * self.d(i - 1, x , n - 1) + a * self.d(i, x, n - 1)
 
-
-"""
-	def d(self, x, u, d):
-
-		k itererar degree
-		n = degree
-		i = vilken knut d.v.s vilket u
-
-		dk = d;
-		for k in (np.arange(degree) + 1)
-		ak,i = (x - u[i]) / (u[i + degree + 1 - k] - u[i];
-		dk_i = (1 - a_ki) * dk_i1 + dk_i1 * dk_i
-"""
 
 def memoize(f):
 	memo = {}
@@ -113,13 +110,18 @@ def memoize(f):
 	return helper
 
 close("all")
-s = Splines(np.arange(5), np.arange(5))
+ds = array([	[-20,   10],
+		[-50,   20],
+		[-25,    5],
+		[-100, -15],
+		[-25,  -65]])
+s = Splines(np.arange(5), ds.transpose())
 x = linspace(0,5,100)
-plot(x, s.N(0,x,3))
-plot(x, s.N2(0,x,3,{})[(0,3)])
-memo = {}
-s.N3(0,x,3,memo)
-plot(x, memo[(0,3)])
+plot(x, s.N(1,x,3))
+#plot(x, s.N2(1,x,3,{})[(0,3)])
+#memo = {}
+#s.N3(1,x,3,memo)
+#plot(x, memo[(0,3)])
 """
 Test shows that:
 N much slower than N2
@@ -133,3 +135,5 @@ t3 = {}
 all(t1 == t2) * all(t1 == t3)
 
 """
+
+# test d
