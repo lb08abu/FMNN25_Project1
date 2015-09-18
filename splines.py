@@ -16,12 +16,17 @@ import matplotlib.pyplot as plt
 
 
 class Splines(object):
-    def __init__(self, grid, dvalues):  # grid = u? se slide 11
-        self.degree = 3
-        self.nbr_ds = len(dvalues)
-        self.u_max  = self.degree + self.nbr_ds  # + 1?
-        self.us     = np.arange(self.u_max + 1)  # i st. u?
-        self.ds     = dvalues
+    def __init__(self, knots, dvalues):  # grid = u? se slide 11
+        self.n = len(knots)
+        self.m = len(dvalues)
+        self.p = self.m - self.n - 1
+        self.knots = knots
+
+        # self.degree = 3
+        # self.nbr_ds = len(dvalues)
+        # self.u_max  = self.degree + self.nbr_ds  # + 1?
+        # self.us     = np.arange(self.u_max + 1)  # i st. u?
+        # self.ds     = dvalues
 
     def __call__(self, u, *args, **kwargs):
         """
@@ -36,13 +41,16 @@ class Splines(object):
         pass
 
     def N0(self, i, x):
-        return (i <= x) * (x < i + 1)
+        if (self.knots[i] <= x < self.knots[i+1]):
+            return 1
+        else:
+            return 0
 
     def N(self, i, x, n):
         if n == 0:
             return self.N0(i, x)
-        else: 
-            us = self.us
+        else:
+            us = self.knots
             c1 = (x - us[i]) / (us[i + n] - us[i])
             c2 = (us[i + n + 1] - x) / (us[i + n + 1] - us[i + 1])
             return c1 * self.N(i, x, n - 1) + c2 * self.N(i + 1, x, n - 1)
@@ -109,19 +117,6 @@ def memoize(f):
 
 
 def main():
-    """
-    Test shows that:
-    N much slower than N2
-    a = np.arange(10)
-    s = splines(a,a)
-    %timeit t1 = s.N(0, x, 10) # 49.7 ms
-    %timeit t2 = s.N2(0, x, 10, {})[(0,10)] #2.24 ms
-    t3 = {}
-    %timeit s.N3(0, x, 10, t3) # 954 ns!
-
-    all(t1 == t2) * all(t1 == t3)
-
-    """
 
     plt.close("all")
 
@@ -135,23 +130,20 @@ def main():
 
     print(ds)
 
-    s = Splines(np.arange(5), ds)
-    x = np.linspace(0,5,100)
-    fig = plt.figure()
+    knots = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8])
+    s = Splines(knots, ds)
+
+    x = np.linspace(0, 5, 100)
     # plt.scatter(ds[0, :], ds[1, :])
     N0 = s.N(0, x, 3)
     N1 = s.N(1, x, 3)
     N2 = s.N(2, x, 3)
     N3 = s.N(3, x, 3)
     plt.plot(x, N0)
-    plt.plot(x, N1)
-    plt.plot(x, N2)
-    plt.plot(x, N3)
+    # plt.plot(x, N1)
+    # plt.plot(x, N2)
+    # plt.plot(x, N3)
 
-    # plot(x, s.N2(1,x,3,{})[(0,3)])
-    # memo = {}
-    # s.N3(1,x,3,memo)
-    # plot(x, memo[(0,3)])
     plt.show()
 
 
