@@ -17,6 +17,10 @@ from functools import partial
 class Spline(object):
 
 	def __init__(self, grid, dvalues):
+		"""
+		Initiates all instance variables. 
+		Calculates equidistant knot points.
+		"""
 		# Set degree
 		self.degree 	= 3
 
@@ -64,13 +68,23 @@ class Spline(object):
 				plot(points[0,0], points[0,1], 'r*')
 				plot(points[-1,0], points[-1,1], 'r*')
 
-	def get_basis_func(self, us, i):
+	def get_basis_func(self, us, i): 
+		"""
+		Task 3
+		"""
 		return partial(self.N3, us = us, i = i)
 
 	def N0(self, us, i, x):
+		"""
+		Base case for deBoor's algorithm
+		"""
 		return (self.us[i] <= x) * (x < self.us[i + 1]);
 
 	def N(self, us, i, x, n):
+		"""
+		deBoor's algorithm for finding basis functions. 
+		Not memoized
+		"""
 		if n == 0:
 			return self.N0(us, i, x)
 		else: 
@@ -78,7 +92,13 @@ class Spline(object):
 			c2 = (us[i + n + 1] - x) / (us[i + n + 1] - us[i + 1])
 			return c1 * self.N(us, i, x, n - 1) + c2 * self.N(us, i + 1, x, n - 1)
 
-	def N2(self, us, i, x, n, memo): # memoized, returns new dictionaries all the time
+	def N2(self, us, i, x, n, memo): 
+		"""
+		deBoor's algorithm for finding basis functions. 
+		Memoized. Stores previous calculations in a dictionary. 
+		The function returns a new dictionary at every return. 
+		This is avoided in N3
+		"""# memoized, returns new dictionaries all the time
 		if n == 0:
 			if (i, 0) not in memo:
 				memo[(i, 0)] = self.N0(us, i, x)
@@ -95,7 +115,13 @@ class Spline(object):
 
 			return memo
 
-	def N3(self, us, i, x, n, memo): # memoized, utilizes that an dictonary is mutable like a C pointer
+	def N3(self, us, i, x, n, memo): 
+		"""
+		deBoor's algorithm for finding basis functions. 
+		Memoized. Stores previous calculations in a dictionary. 
+		The function utilizes that the dictonary object is mutable.
+		Hence it has no return value.
+		"""
 		if n == 0:
 			if (i, 0) not in memo:
 				memo[(i, 0)] = self.N0(us, i,x)
@@ -111,7 +137,10 @@ class Spline(object):
 			memo[(i, n)] = c1 * memo[(i, n - 1)] + c2 * memo[(i + 1, n - 1)]
 			return 
 
-	def d(self, i, x, n):
+	def d(self, i, x, n): 
+		"""
+		Blossom algorithm. Not memoized.
+		"""
 		if n == 0:
 			return self.ds[i,:]
 		else:
@@ -120,7 +149,31 @@ class Spline(object):
 			return (1 - a) * self.d(i - 1, x , n - 1) + a * self.d(i, x, n - 1)
 
 	def eval_by_sum(self, u):
-		pass
+		"""
+		Needed for task 4. Evaluates the spline by using the sum approach
+		instead of Blossoms algorithm
+		"""
+		grid 	= self.grid # xi
+		nbr_ds 	= self.nbr_ds
+
+		# Calculate "vandermonde like" matrix
+		memo 	= {}
+		l_grid 	= len(grid)
+		N 	= np.zeros((l_grid, nbr_ds))
+		for i in arange(nbr_ds - 1): # -1 due to recursion i + 1 in N3?
+			self.N3(self.us, i, grid, 3, memo)
+			N[:,i] = memo[(i, 3)]
+
+		# Interpolate
+		xs = np.dot(N, self.ds[:,0])
+		ys = np.dot(N, self.ds[:,1])
+		
+		# Possible solution? Throw away points
+		#xs = xs[20:-20]
+		#ys = ys[20:-20]
+		
+		return (xs, ys)
+
 
 close("all")
 ds = array([	[ -20,	 10],
@@ -173,3 +226,8 @@ all(t1 == t2) * all(t1 == t3[(0,10)])
 # 	points = s.d(i, x, p)
 # 	#print("i = {}, p = {}, I_len - i = {}".format(i, p, I_len - i - 1))
 # 	plot(points[:,0],points[:,1])
+
+# Test eval_by_sum
+xs, ys = s.eval_by_sum(s.us)
+s.plot()
+plot(xs, ys)
