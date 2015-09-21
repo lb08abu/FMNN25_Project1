@@ -6,11 +6,13 @@ This is the README for Project 1.
 
 ## Todo
 
-* Check partial function
-* Fix code to take multiple knot points at the start/end, instead of duplicate points on the control polygon
-* Write main function
-* Write tests
-* Fix `eval_by_sum`
+* standalone blossom algorithm
+* Fix problems caused by adding multiple knots and ds at end points (branch: angelos_fixing_us)
+* Fix `eval_by_sum` (connected to point above?)
+* Write main function ~ showcase
+* Write tests 
+* ipython notebook (low priority)
+* memoize blossoms (low priority)
 
 
 ## Useful Links
