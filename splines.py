@@ -25,8 +25,13 @@ class Spline(object):
 		self.degree 	= 3
 
 		# Save control points
-		self.ds		= dvalues
-		self.nbr_ds 	= len(dvalues)
+		self.nbr_ds 	= len(dvalues)# +6 due to added copies
+		ds 		= np.zeros((self.nbr_ds + 6, 2))
+		ds[3:-3, :]	= dvalues
+		ds[:3, :]	= ds[3, :]
+		ds[-3:, :]	= ds[-4, :]
+		self.ds		= ds
+
 
 		# Find equidistant knot points
 		nbr_knots 	= self.degree + self.nbr_ds #add 2 on each end
@@ -34,8 +39,18 @@ class Spline(object):
 		self.grid 	= grid
 		len_grid 	= len(grid)
 		indices 	= ceil(len_grid / nbr_knots) * np.arange(nbr_knots)
-		self.us 	= grid[indices.astype(int)]
-		self.us[-1]	= grid[-1] # Otherwise the end point might be exluded
+		#print("ind = {}".format(indices))
+		us 		= np.zeros(self.nbr_knots +  6)
+		tmp 		= grid[indices.astype(int)]
+		tmp[-1]		= grid[-1]
+		us[3:-3] 	= tmp
+		us[:3]		= us[3]
+		us[-3:]		= us[-4]
+		self.us 	= us
+		
+		#self.us 	= grid[indices.astype(int)]
+		#self.us[-1]	= grid[-1] # Otherwise the end point might be exluded
+
 
 		# Apparently the values of the knots can be arbitrary. 
 		# The only thing that matters is that we have a enough of them.
@@ -57,7 +72,7 @@ class Spline(object):
 			plot(ds[:,0], ds[:,1])
 
 		grid = self.grid;
-		for i in arange(3,self.nbr_knots - 3): # Avoid the 3 dummy points
+		for i in arange(3,self.nbr_knots + 3): # NOT SURE WHY 3:s 
 			ui 	= self.us[i]
 			ui1 	= self.us[i + 1]
 			x 	= grid[(ui <= grid) & (grid  <= ui1)] 
@@ -159,12 +174,14 @@ class Spline(object):
 		# Calculate "vandermonde like" matrix
 		memo 	= {}
 		l_grid 	= len(grid)
-		N 	= np.zeros((l_grid, nbr_ds))
-		for i in arange(nbr_ds - 1): # -1 due to recursion i + 1 in N3?
+		N 	= np.zeros((l_grid, nbr_ds + 6 ))
+		for i in arange(nbr_ds): # -1 due to recursion i + 1 in N3?
 			self.N3(self.us, i, grid, 3, memo)
 			N[:,i] = memo[(i, 3)]
+			print(i)
 
 		# Calculate sum
+		print(N.shape)
 		xs = np.dot(N, self.ds[:,0])
 		ys = np.dot(N, self.ds[:,1])
 		
@@ -190,6 +207,19 @@ ds = array([	[ -20,	 10],
 		[  40,	 20],
 		[  40,	 20],
 		[  40,	 20]])
+
+
+ds = array([	[ -20,	 10],
+		[ -50,	 20],
+		[ -25, 	  5],
+		[-100,	-15],
+		[ -25,	-65],
+		[  10,	-80],
+		[  60, 	-30],
+		[  10,	 20],
+		[  20, 	  0],
+		[  40,	 20]])
+
 x = linspace(0,1,150)
 s = Spline(x, ds)
 #print(shape(x))
@@ -228,6 +258,6 @@ all(t1 == t2) * all(t1 == t3[(0,10)])
 # 	plot(points[:,0],points[:,1])
 
 # Test eval_by_sum
-xs, ys = s.eval_by_sum(s.us)
-s.plot()
-plot(xs, ys)
+#xs, ys = s.eval_by_sum(s.us)
+#s.plot()
+#plot(xs, ys)
