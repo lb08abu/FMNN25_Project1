@@ -29,7 +29,7 @@ class Spline(object):
 		self.nbr_ds 	= len(dvalues)
 
 		# Find equidistant knot points
-		nbr_knots 	= self.degree + self.nbr_ds
+		nbr_knots 	= self.degree + self.nbr_ds #add 2 on each end
 		self.nbr_knots	= nbr_knots
 		self.grid 	= grid
 		len_grid 	= len(grid)
@@ -68,7 +68,7 @@ class Spline(object):
 				plot(points[0,0], points[0,1], 'r*')
 				plot(points[-1,0], points[-1,1], 'r*')
 
-	def get_basis_func(self, us, i): 
+	def get_basis_func(self, us, i): # needs checking
 		"""
 		Task 3
 		"""
@@ -164,7 +164,7 @@ class Spline(object):
 			self.N3(self.us, i, grid, 3, memo)
 			N[:,i] = memo[(i, 3)]
 
-		# Interpolate
+		# Calculate sum
 		xs = np.dot(N, self.ds[:,0])
 		ys = np.dot(N, self.ds[:,1])
 		
@@ -190,7 +190,7 @@ ds = array([	[ -20,	 10],
 		[  40,	 20],
 		[  40,	 20],
 		[  40,	 20]])
-x = linspace(0,1,100)
+x = linspace(0,1,150)
 s = Spline(x, ds)
 #print(shape(x))
 #plot(x, s.N(s.us, 1,x,3))
