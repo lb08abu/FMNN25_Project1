@@ -18,3 +18,6 @@ This is the README for Project 1.
 
 This seems to be a useful link:
 http://devosaurus.blogspot.se/2013/10/exploring-b-splines-in-python.html
+
+This link is about memoization:
+https://wiki.python.org/moin/PythonDecoratorLibrary#Memoize
