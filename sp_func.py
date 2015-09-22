@@ -1,15 +1,32 @@
-#!/usr/bin/env python3
-
 import numpy as np
-from functools import lru_cache
 import matplotlib.pyplot as plt
-import warnings
-
-# raise warnings as exceptions to catch RuntimeWarning
-warnings.filterwarnings('error')
+import collections
 
 
-def get_basis_func(knot_seq, j, n=3, max_cache=16):
+class memoized:
+    '''Decorator. Caches a function's return value each time it is called.
+    If called later with the same arguments, the cached value is returned
+    (not reevaluated).
+    '''
+    def __init__(self, func):
+        self.func = func
+        self.cache = {}
+
+    def __call__(self, *args):
+        if not isinstance(args, collections.Hashable):
+            # uncacheable. a list, for instance.
+            # better to not cache than blow up.
+            return self.func(*args)
+
+        if args in self.cache:  # Check if function call with args is in cache
+            return self.cache[args]
+        else:
+            value = self.func(*args)
+            self.cache[args] = value
+            return value
+
+
+def get_basis_func(knot_seq, j, n=3):
     """
     Return the basis function N^n_j for the knot sequence argument.
 
@@ -17,51 +34,47 @@ def get_basis_func(knot_seq, j, n=3, max_cache=16):
         knot_seq: Knot sequence.
         j: index
         n: Optional argument. Degree of spline. (default=3)
-        max_cache: Optional argument. Number of cached function returns
-            for the recursive formula.
-
     """
 
-    @lru_cache(maxsize=max_cache)
+    @memoized  # Memoizes function.
     def N(x, n, i):
-        if n == 0:
+        """
+        Recursive calculation of basis function values.
+        """
+        if n == 0:  # If degree == 0 return N^0_j(x)
             return (knot_seq[i] <= x) * (x < knot_seq[i+1])
 
-        try:
-            c1 = ((x - knot_seq[i]) /
-                  (knot_seq[i + n] - knot_seq[i]))
-        except (ZeroDivisionError, RuntimeWarning):
-            c1 = 0.
+        c1, c2 = 0, 0
+        # Only evaluate c1 and c2 when the denominators are non-zero.
+        if (knot_seq[i + n] - knot_seq[i]):
+            c1 = (x - knot_seq[i]) / \
+                 (knot_seq[i + n] - knot_seq[i])
 
-        try:
-            c2 = ((knot_seq[i + n + 1] - x) /
-                  (knot_seq[i + n + 1] - knot_seq[i + 1]))
-        except (ZeroDivisionError, RuntimeWarning):
-            c2 = 0.
+        if (knot_seq[i + n + 1] - knot_seq[i + 1]):
+            c2 = (knot_seq[i + n + 1] - x) / \
+                 (knot_seq[i + n + 1] - knot_seq[i + 1])
 
+        if not (c1 or c2):  # If c1 and c2 both 0, stop recursive calls.
+            return 0
         return c1 * N(x, n - 1, i) + c2 * N(x, n - 1, i + 1)
 
+    @np.vectorize  # Vectorizes function such that it can accept array inputs.
     def basis_func(x):
         """
-        Return basis function value N^{0}_{1}(x)
+        Return basis function value N^{0}_{1}(u)
         """.format(n, j)
-
-        # Avoid error with lru_cache when x is type list/ndarray.
-        if hasattr(x, '__iter__'):
-            return np.array([N(xi, n, j) for xi in x])
-
         return N(x, n, j)
 
     return basis_func
 
 
 if __name__ == '__main__':
-    knots = [0, 0, 1, 2, 3, 3, 4, 5, 5, 5]
-    f = get_basis_func(knots, 1)
-
-    x = np.linspace(0., 10, 50)
-    fx = f(x)
-    print(x)
-    print(fx)
-    plt.plot(x, f(x))
+    knots = [0, 0, 0, 0, 1, 2, 3, 4, 4, 4, 4]
+    nknots = len(knots)
+    fs = [get_basis_func(knots, j) for j in range(nknots - 4)]
+    x = np.linspace(0., 4-1e-9, 1000)
+    fxs = [f(x) for f in fs]
+    for i, fx in enumerate(fxs):
+        plt.plot(x, fx, label='$N^3_{0}$'.format(i))
+    # plt.legend()
     plt.show()

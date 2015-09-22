@@ -69,35 +69,35 @@ class Spline(object):
             raise DValuesError("expected dvalues shape as (:, 2)")
 
         # Set degree
-        self.degree     = degree
+        self.degree = degree
 
         # Save control points
-        self.nbr_ds     = len(dvalues)
-        ds              = np.zeros((self.nbr_ds + 6, 2))
-        ds[3:-3, :]     = dvalues
-        ds[:3, :]       = ds[3, :]
-        ds[-3:, :]      = ds[-4, :]
-        self.ds         = ds
+        self.nbr_ds = len(dvalues)
+        ds = np.zeros((self.nbr_ds + 6, 2))
+        ds[3:-3, :] = dvalues
+        ds[:3, :] = ds[3, :]
+        ds[-3:, :] = ds[-4, :]
+        self.ds = ds
 
         # Find equidistant knot points
-        nbr_knots       = self.degree + self.nbr_ds  # add 2 on each end
-        self.nbr_knots  = nbr_knots
-        self.grid       = grid
-        len_grid        = len(grid)
-        indices         = math.ceil(len_grid / nbr_knots) * np.arange(nbr_knots)
+        nbr_knots = self.degree + self.nbr_ds  # add 2 on each end
+        self.nbr_knots = nbr_knots
+        self.grid = grid
+        len_grid = len(grid)
+        indices = math.ceil(len_grid / nbr_knots) * np.arange(nbr_knots)
 
-        us              = np.zeros(self.nbr_knots +  6)
-        tmp             = grid[indices.astype(int)]
-        tmp[-1]         = grid[-1]
-        us[3:-3]        = tmp
-        us[:3]          = us[3]
-        us[-3:]         = us[-4]
-        self.us         = us
+        us = np.zeros(self.nbr_knots + 6)
+        tmp = grid[indices.astype(int)]
+        tmp[-1] = grid[-1]
+        us[3: -3] = tmp
+        us[:3] = us[3]
+        us[-3:] = us[-4]
+        self.us = us
 
         # attribute for deBoor points
         self.deBoor_points = []
 
-        # Apparently the values of the knots can be arbitrary. 
+        # Apparently the values of the knots can be arbitrary.
         # The only thing that matters is that we have a enough of them.
 
     def __call__(self, u):
@@ -121,7 +121,8 @@ class Spline(object):
         """
         plt.figure()
         if plot_control_poly:
-            plt.plot(self.ds[:, 0], self.ds[:, 1], 'g', label='Control polygon')
+            plt.plot(self.ds[:, 0], self.ds[:, 1],
+                     'g', label='Control polygon')
 
         points = self.blossom()
         plt.plot(points[:, 0], points[:, 1], 'b--',
@@ -162,12 +163,12 @@ class Spline(object):
         """
         if n == 0:
             return self.N0(us, i, x)
-        else: 
+        else:
             c1 = (x - us[i]) / (us[i + n] - us[i])
             c2 = (us[i + n + 1] - x) / (us[i + n + 1] - us[i + 1])
             return c1*self.N(us, i, x, n - 1) + c2*self.N(us, i + 1, x, n - 1)
 
-    def N2(self, us, i, x, n, memo): 
+    def N2(self, us, i, x, n, memo):
         """
         Same as `Spline.N` but in a memoized form. Stores previous calculations
         in a dictionary.
@@ -186,7 +187,7 @@ class Spline(object):
             if (i, 0) not in memo:
                 memo[(i, 0)] = self.N0(us, i, x)
             return memo
-        else: 
+        else:
             c1 = (x - us[i]) / (us[i + n] - us[i])
             c2 = (us[i + n + 1] - x) / (us[i + n + 1] - us[i + 1])
 
@@ -198,7 +199,7 @@ class Spline(object):
 
             return memo
 
-    def N3(self, us, i, x, n, memo): 
+    def N3(self, us, i, x, n, memo):
         """
         Same as `Spline.N` but in a memoized form. Stores previous calculations
         in a dictionary.
@@ -215,10 +216,10 @@ class Spline(object):
         if n == 0:
             if (i, 0) not in memo:
                 memo[(i, 0)] = self.N0(us, i, x)
-        else: 
+        else:
 
             # Set 0/0 = 0. Be careful of infinity? (a.k.a. constant / 0)
-            with np.errstate(divide = 'ignore', invalid = 'ignore'):
+            with np.errstate(divide='ignore', invalid='ignore'):
                 c1 = (x - us[i]) / (us[i + n] - us[i])
                 c2 = (us[i + n + 1] - x) / (us[i + n + 1] - us[i + 1])
                 c1 = np.nan_to_num(c1)
@@ -226,7 +227,7 @@ class Spline(object):
 
             if (i, n - 1) not in memo:
                 self.N3(us, i, x, n - 1, memo)
-            
+
             self.N3(us, i + 1, x, n - 1, memo)
             memo[(i, n)] = c1 * memo[(i, n - 1)] + c2 * memo[(i + 1, n - 1)]
 
@@ -246,10 +247,10 @@ class Spline(object):
             us = self.us
 
             # Set 0/0 = 0. Be careful of infinity? (a.k.a. constant / 0)
-            with np.errstate(divide = 'ignore', invalid = 'ignore'):
+            with np.errstate(divide='ignore', invalid='ignore'):
                 a = (x - us[i]) / (us[i + self.degree + 1 - n] - us[i])
                 a = np.nan_to_num(a)
-            
+
             return (1 - a) * self.d(i - 1, x, n - 1) + a * self.d(i, x, n - 1)
 
     def blossom(self):
@@ -264,7 +265,7 @@ class Spline(object):
         points = []
 
         if self.deBoor_points:
-            self.deBoor_points = []  # erase previous deBoor points calculations
+            self.deBoor_points = []  # erase previous deBoor points calcs
 
         for i in np.arange(3, self.nbr_knots + 3):  # why 3 and + 3 ??? due to enpoints?
             ui0 = self.us[i]
@@ -307,7 +308,7 @@ class Spline(object):
 
 def main():
     plt.close("all")
-    ds = np.array([ 
+    ds = np.array([
                 [ -20,   10],
                 [ -50,   20],
                 [ -25,    5],
