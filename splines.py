@@ -59,17 +59,14 @@ class Spline(object):
         if plot_control_poly:
             plt.plot(self.ds[:, 0], self.ds[:, 1])
 
-        grid = self.grid
-        for i in np.arange(3, self.nbr_knots - 3):  # Avoid the 3 dummy points
-            ui = self.us[i]
-            ui1 = self.us[i + 1]
-            x = grid[(ui <= grid) & (grid <= ui1)]
-            points = self.d(i, x.reshape(len(x), 1), 3)
-            plt.plot(points[:, 0], points[:, 1], 'r')
+        points = self.blossom()
+        plt.plot(points[:, 0], points[:, 1], 'b--')
 
-            if plot_deBoor_points:
-                plt.plot(points[0, 0], points[0, 1], 'r*')
-                plt.plot(points[-1, 0], points[-1, 1], 'r*')
+        # if plot_deBoor_points:
+        #     plt.plot(points[0, 0], points[0, 1], 'r*')
+        #     plt.plot(points[-1, 0], points[-1, 1], 'r*')
+
+        plt.show()
 
     def get_basis_func(self, us, i):  # needs checking
         """
@@ -151,6 +148,20 @@ class Spline(object):
             a = (x - us[i]) / (us[i + self.degree + 1 - n] - us[i])
             return (1 - a) * self.d(i - 1, x, n - 1) + a * self.d(i, x, n - 1)
 
+    def blossom(self):
+        """
+        Runs the entire blossom algo for the given data at object creation.
+        """
+        grid = self.grid
+        points = []
+        for i in np.arange(3, self.nbr_knots - 3):  # Avoid the 3 dummy points
+            ui0 = self.us[i]
+            ui1 = self.us[i + 1]
+            x = grid[(ui0 <= grid) & (grid <= ui1)]
+            points.extend(self.d(i, x.reshape(len(x), 1), 3))
+
+        return np.array(points)
+
     def eval_by_sum(self, u):
         """
         Needed for task 4. Evaluates the spline by using the sum approach
@@ -185,19 +196,20 @@ def main():
             [ -20,     10],
             [ -20,     10],
             [ -50,     20],
-            [ -25,       5],
+            [ -25,      5],
             [-100,    -15],
             [ -25,    -65],
             [  10,    -80],
-            [  60,     -30],
+            [  60,    -30],
             [  10,     20],
-            [  20,       0],
+            [  20,      0],
             [  40,     20],
             [  40,     20],
             [  40,     20]])
 
     x = np.linspace(0,1,150)
     s = Spline(x, ds)
+    s.plot()
 
     # print(shape(x))
     # plt.plot(x, s.N(s.us, 1,x,3))
@@ -236,7 +248,6 @@ def main():
 
     # Test eval_by_sum
     xs, ys = s.eval_by_sum(s.us)
-    s.plot()
     plt.plot(xs, ys)
     plt.show()
 
