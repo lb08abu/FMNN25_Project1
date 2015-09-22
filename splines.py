@@ -226,8 +226,9 @@ class Spline(object):
             if not self.deBoor_points:
                 self.deBoor_points.append(points[0])  # add first point
             self.deBoor_points.append(points[-1])
-
-        return np.array(points)
+        x = np.array(points)
+        print(x.shape)
+        return x
 
     def eval_by_sum(self):
         """
@@ -242,8 +243,8 @@ class Spline(object):
         # Calculate "vandermonde like" matrix
         memo    = {}
         l_grid  = len(grid)
-        N       = np.zeros((l_grid, nbr_ds + 6 )) # OBS +6
-        for i in np.arange(nbr_ds + 5): # Correct indexing? Why + 5?
+        N       = np.zeros((l_grid, nbr_ds + 6))  # OBS +6
+        for i in np.arange(nbr_ds + 5):  # Correct indexing? Why + 5?
             self.N3(self.us, i, grid, 3, memo)
             N[:, i] = memo[(i, 3)]
 
@@ -255,7 +256,9 @@ class Spline(object):
         xs = np.dot(N, self.ds[:, 0])
         ys = np.dot(N, self.ds[:, 1])
 
-        return (xs[:-1], ys[:-1]) 
+        x = np.array((xs[:-1], ys[:-1])).T
+        print(x.shape)
+        return x
 
 
 def main():
@@ -297,8 +300,8 @@ def main():
     """
 
     # Test eval_by_sum
-    xs, ys = s.eval_by_sum()
-    plt.plot(xs, ys)
+    ys = s.eval_by_sum()
+    plt.plot(ys[:, 0], ys[:, 1])
     plt.show()
 
 

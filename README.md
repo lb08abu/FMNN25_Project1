@@ -9,7 +9,7 @@ This is the README for Project 1.
 * Fix problems caused by adding multiple knots and ds at end points (branch: angelos_fixing_us)
 * Fix `eval_by_sum` (connected to point above?)
 * Write main function ~ showcase
-* Write tests 
+* Write tests (somewhat done - currently blossom != deBoor) 
 * IPython notebook (low priority)
 * Memoize blossoms (low priority)
 
