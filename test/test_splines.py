@@ -1,6 +1,8 @@
 """
-Test case for testing the Splines class.
+FMNN25 Project 1 - Splines
 
+test_splines.py
+Test case for testing the Splines class.
 Run by `nosetests`
 """
 
@@ -64,8 +66,6 @@ class SplinesTestCase(unittest.TestCase):
     def test_deBoor_vs_blossom(self):
         ds = np.array([
                 [ -20,     10],
-                [ -20,     10],
-                [ -20,     10],
                 [ -50,     20],
                 [ -25,      5],
                 [-100,    -15],
@@ -74,11 +74,9 @@ class SplinesTestCase(unittest.TestCase):
                 [  60,    -30],
                 [  10,     20],
                 [  20,      0],
-                [  40,     20],
-                [  40,     20],
                 [  40,     20]])
 
-        x = np.linspace(0, 1, 150)
+        x = np.linspace(0., 1., 150)
         s = splines.Spline(x, ds)
         self.assertEqual(s.eval_by_sum(), s.blossom())
 

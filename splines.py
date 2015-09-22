@@ -1,12 +1,8 @@
 """
-Class to represent splines for 2D curve design.
+FMNN25 Project 1 - Splines
 
-To design a Spline we need:
- - Control points
- - Knots
- - Coefficients (one for each control point)
-
-Calculate all basis functions N^k_i(u)
+splines.py
+Contains the class and all supporting code for the class Spline.
 """
 
 from __future__ import division
@@ -17,8 +13,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-
 class DValuesError(Exception):
+    """
+    Unique Exception for raising issues with the dvalues in Spline class.
+    """
     pass
 
 
@@ -29,13 +27,27 @@ class Spline(object):
     This class has the main functions:
       * __init__: Initialises the class and sets instance attributes.
       * __call__: Returns the evaluation point at given point
-      * plot: 
+      * plot:
     """
+
     def __init__(self, grid, dvalues, degree=3):
         """
-        Initiates all instance variables. 
-        Calculates equidistant knot points.
+        Initialization for the Spline class, the following parameters are
+        calculated:
+          * Number of knots
+          * Equidistant knot points
+          * Adds 3 copies at the start and end point of the control
+            points and knot points
+
+        :param grid: numpy.ndarray, grid points between which the intervals will
+            evaluated for the creation of the spline
+        :param dvalues: numpy.ndarray, polygon control points
         """
+
+        if not isinstance(grid, np.ndarray):
+            raise TypeError("grid must be a numpy array")
+        if not isinstance(dvalues, np.ndarray):
+            raise TypeError("dvalues must be a numpy array")
 
         if not isinstance(grid, np.ndarray):
             raise TypeError("grid must be a numpy array")
@@ -57,20 +69,30 @@ class Spline(object):
             raise DValuesError("expected dvalues shape as (:, 2)")
 
         # Set degree
-        self.degree = degree
+        self.degree     = degree
 
         # Save control points
-        self.ds = dvalues
-        self.nbr_ds = len(dvalues)
+        self.nbr_ds     = len(dvalues)
+        ds              = np.zeros((self.nbr_ds + 6, 2))
+        ds[3:-3, :]     = dvalues
+        ds[:3, :]       = ds[3, :]
+        ds[-3:, :]      = ds[-4, :]
+        self.ds         = ds
 
         # Find equidistant knot points
-        nbr_knots = self.degree + self.nbr_ds  # add 2 on each end
-        self.nbr_knots = nbr_knots
-        self.grid = grid
-        len_grid = len(grid)
-        indices = math.ceil(len_grid / nbr_knots) * np.arange(nbr_knots)
-        self.us = grid[indices.astype(int)]
-        self.us[-1] = grid[-1]  # Otherwise the end point might be excluded
+        nbr_knots       = self.degree + self.nbr_ds  # add 2 on each end
+        self.nbr_knots  = nbr_knots
+        self.grid       = grid
+        len_grid        = len(grid)
+        indices         = math.ceil(len_grid / nbr_knots) * np.arange(nbr_knots)
+
+        us              = np.zeros(self.nbr_knots +  6)
+        tmp             = grid[indices.astype(int)]
+        tmp[-1]         = grid[-1]
+        us[3:-3]        = tmp
+        us[:3]          = us[3]
+        us[-3:]         = us[-4]
+        self.us         = us
 
         # attribute for deBoor points
         self.deBoor_points = []
@@ -80,14 +102,22 @@ class Spline(object):
 
     def __call__(self, u):
         """
-        This returns a point s(u) = [s_x(u) s_y(u)]
+        Calculate a point on the spline.
+
+        :param u: int/float, evaluation point
+        :return: numpy.ndarray, vector location in 2D space of the point `u`
+            on the spline
         """
         idx = self.us.searchsorted(u)
-        return self.d(idx, u, 3)
+        i = idx
+        return self.d(i, u, 3)
 
     def plot(self, plot_control_poly=False, plot_deBoor_points=False):
         """
-        Plots the whole spline
+        Plots the entire spline for the data passed in at instance creation.
+
+        :param plot_control_poly: bool, True for plotting the control polygon
+        :param plot_deBoor_points: bool, True to plot the deBoor points
         """
         plt.figure()
         if plot_control_poly:
@@ -105,15 +135,15 @@ class Spline(object):
         plt.legend(loc='best')
         plt.show()
 
-    def get_basis_func(self, us, i):  # needs checking
-        """
-        Task 3
-        """
-        return partial(self.N3, us=us, i=i)
-
     def N0(self, us, i, x):
         """
-        Base case for deBoor's algorithm
+        Base case for deBoor's algorithm.
+        Note: returns 0 at endpoint when it should return 1.
+
+        :param us: numpy.ndarray, values of `u` (not currently used, the object
+            attribute self.us is used instead)
+        :param i: int, index of `us` (essentially the 'hot interval'?)
+        :param x: numpy.ndarray, evaluation points
         """
         return (self.us[i] <= x) * (x < self.us[i + 1])
 
@@ -165,8 +195,13 @@ class Spline(object):
             if (i, 0) not in memo:
                 memo[(i, 0)] = self.N0(us, i, x)
         else: 
-            c1 = (x - us[i]) / (us[i + n] - us[i])
-            c2 = (us[i + n + 1] - x) / (us[i + n + 1] - us[i + 1])
+
+            # Set 0/0 = 0. Be careful of infinity? (a.k.a. constant / 0)
+            with np.errstate(divide = 'ignore', invalid = 'ignore'):
+                c1 = (x - us[i]) / (us[i + n] - us[i])
+                c2 = (us[i + n + 1] - x) / (us[i + n + 1] - us[i + 1])
+                c1 = np.nan_to_num(c1)
+                c2 = np.nan_to_num(c2)
 
             if (i, n - 1) not in memo:
                 self.N3(us, i, x, n - 1, memo)
@@ -174,21 +209,35 @@ class Spline(object):
             self.N3(us, i + 1, x, n - 1, memo)
             memo[(i, n)] = c1 * memo[(i, n - 1)] + c2 * memo[(i + 1, n - 1)]
 
-    def d(self, i, x, n): 
+    def d(self, i, x, n):
         """
-        Blossom algorithm. Not memoized.
+        Recursively runs the blossom algorithm for a given data interval x.
+
+        :param i: Index
+        :param x: Interval of evaluation
+        :param n: Order of blossom, note we return self.ds[i, :] if n == 0
+            (this is the base case of the recursive function)
+        :return: Evaluated points along x
         """
         if n == 0:
             return self.ds[i, :]
         else:
             us = self.us
-            a = (x - us[i]) / (us[i + self.degree + 1 - n] - us[i])
+
+            # Set 0/0 = 0. Be careful of infinity? (a.k.a. constant / 0)
+            with np.errstate(divide = 'ignore', invalid = 'ignore'):
+                a = (x - us[i]) / (us[i + self.degree + 1 - n] - us[i])
+                a = np.nan_to_num(a)
+            
             return (1 - a) * self.d(i - 1, x, n - 1) + a * self.d(i, x, n - 1)
 
     def blossom(self):
         """
-        Runs the entire blossom algorithm for the given data at object creation.
+        Runs the entire blossom algorithm for all data points based on the
+        given data at object instantiation.
         deBoor points are saved as list items in the attribute `deBoor_points`.
+
+        :return: Evaluated 3rd order spline for all points
         """
         grid = self.grid
         points = []
@@ -196,66 +245,69 @@ class Spline(object):
         if self.deBoor_points:
             self.deBoor_points = []  # erase previous deBoor points calculations
 
-        for i in np.arange(3, self.nbr_knots - 3):  # Avoid the 3 dummy points
+        for i in np.arange(3, self.nbr_knots + 3):  # why 3 and + 3 ??? due to enpoints?
             ui0 = self.us[i]
-            ui1 = self.us[i+1]
+            ui1 = self.us[i + 1]
             x = grid[(ui0 <= grid) & (grid <= ui1)]
             points.extend(self.d(i, x.reshape(len(x), 1), 3))
 
             if not self.deBoor_points:
                 self.deBoor_points.append(points[0])  # add first point
             self.deBoor_points.append(points[-1])
-
-        return np.array(points)
+        x = np.array(points)
+        # print(x.shape)
+        return x
 
     def eval_by_sum(self):
         """
-        Needed for task 4. Evaluates the spline by using the sum approach
-        instead of Blossoms algorithm
+        Evaluates the spline by using the sum of the basis functions instead
+        of the blossoms algorithm.
+
+        :return: Evaluated 3rd order spline for all points
         """
-        grid = self.grid  # xi
+        grid = self.grid
         nbr_ds = self.nbr_ds
 
         # Calculate "vandermonde like" matrix
         memo = {}
         l_grid = len(grid)
-        N = np.zeros((l_grid, nbr_ds))
-        for i in np.arange(nbr_ds - 1):  # -1 due to recursion i + 1 in N3?
+        N = np.zeros((l_grid, nbr_ds + 6))  # OBS +6
+        for i in np.arange(nbr_ds + 5):  # Correct indexing? Why + 5?
             self.N3(self.us, i, grid, 3, memo)
             N[:, i] = memo[(i, 3)]
 
         # Calculate sum
         xs = np.dot(N, self.ds[:, 0])
         ys = np.dot(N, self.ds[:, 1])
-        
-        # Possible solution? Throw away points
-        # xs = xs[20:-20]
-        # ys = ys[20:-20]
-        
-        return (xs, ys)
+
+        x = np.array((xs[:-1], ys[:-1])).T
+        return x
 
 
 def main():
     plt.close("all")
-    ds = np.array([
-            [ -20,     10],
-            [ -20,     10],
-            [ -20,     10],
-            [ -50,     20],
-            [ -25,      5],
-            [-100,    -15],
-            [ -25,    -65],
-            [  10,    -80],
-            [  60,    -30],
-            [  10,     20],
-            [  20,      0],
-            [  40,     20],
-            [  40,     20],
-            [  40,     20]])
+    ds = np.array([ 
+                [ -20,   10],
+                [ -50,   20],
+                [ -25,    5],
+                [-100,  -15],
+                [ -25,  -65],
+                [  10,  -80],
+                [  60,  -30],
+                [  10,   20],
+                [  20,    0],
+                [  40,   20]])
 
     x = np.linspace(0, 1, 150)
     s = Spline(x, ds)
-    s.plot(plot_control_poly=True, plot_deBoor_points=True)
+    s.plot(plot_deBoor_points=True, plot_control_poly=True)
+
+    # print(shape(x))
+    # plt.plot(x, s.N(s.us, 1,x,3))
+    # plt.plot(x, s.N2(1,x,3,{})[(0,3)])
+    # memo = {}
+    # s.N3(1,x,3,memo)
+    # plt.plot(x, memo[(0,3)])
 
     """
     This test shows that:
@@ -270,24 +322,9 @@ def main():
     np.all(t1 == t2) * all(t1 == t3[(0,10)])
     """
 
-    # test d
-    # plt.figure()
-    # plt.plot(ds[:,0], ds[:,1])
-
-    # I = arange(3, 14)
-    # I_len = len(I)
-
-    # for i in I:
-    #     x = np.linspace(i, i + 1 ,100)
-    #     p = 3  # min(i, 3)
-    #     # p = min(min(i, 3), I_len - i - 2)
-    #     points = s.d(i, x, p)
-    #     # print("i = {}, p = {}, I_len - i = {}".format(i, p, I_len - i - 1))
-    #     plt.plot(points[:,0],points[:,1])
-
     # Test eval_by_sum
-    xs, ys = s.eval_by_sum()
-    plt.plot(xs, ys)
+    ys = s.eval_by_sum()
+    plt.plot(ys[:, 0], ys[:, 1])
     plt.show()
 
 
