@@ -17,6 +17,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+
+class DValuesError(Exception):
+    pass
+
+
 class Spline(object):
     def __init__(self, grid, dvalues, degree=3):
         """
@@ -24,10 +29,24 @@ class Spline(object):
         Calculates equidistant knot points.
         """
 
+        if not isinstance(grid, np.ndarray):
+            raise TypeError("grid must be a numpy array")
+        if not isinstance(dvalues, np.ndarray):
+            raise TypeError("dvalues must be a numpy array")
+
         if max(grid) > 1.0:
             raise ValueError("grid values must be in range 0 to 1")
         if min(grid) < 0.0:
             raise ValueError("grid values must be in range 0 to 1")
+        if (grid != sorted(grid)).any():
+            raise ValueError("grid values must be in ascending order")
+
+        # check shape of dvalues
+        try:
+            if dvalues.shape[1] != 2:
+                raise DValuesError("expected dvalues shape as (:, 2)")
+        except IndexError:
+            raise DValuesError("expected dvalues shape as (:, 2)")
 
         # Set degree
         self.degree = degree
