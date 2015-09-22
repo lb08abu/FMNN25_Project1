@@ -15,19 +15,47 @@ from functools import partial
 import math
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy as sp
+
+
+class DValuesError(Exception):
+    pass
 
 
 class Spline(object):
-    def __init__(self, grid, dvalues):
+    def __init__(self, grid, dvalues, degree=3):
         """
         Initiates all instance variables. 
         Calculates equidistant knot points.
         Adds 3 copies at the start and end point of the control points and knot 
         points.
         """
+
+        if not isinstance(grid, np.ndarray):
+            raise TypeError("grid must be a numpy array")
+        if not isinstance(dvalues, np.ndarray):
+            raise TypeError("dvalues must be a numpy array")
+
+        if not isinstance(grid, np.ndarray):
+            raise TypeError("grid must be a numpy array")
+        if not isinstance(dvalues, np.ndarray):
+            raise TypeError("dvalues must be a numpy array")
+
+        if max(grid) > 1.0:
+            raise ValueError("grid values must be in range 0 to 1")
+        if min(grid) < 0.0:
+            raise ValueError("grid values must be in range 0 to 1")
+        if (grid != sorted(grid)).any():
+            raise ValueError("grid values must be in ascending order")
+
+        # check shape of dvalues
+        try:
+            if dvalues.shape[1] != 2:
+                raise DValuesError("expected dvalues shape as (:, 2)")
+        except IndexError:
+            raise DValuesError("expected dvalues shape as (:, 2)")
+
         # Set degree
-        self.degree     = 3
+        self.degree     = degree
 
         # Save control points
         self.nbr_ds     = len(dvalues)
@@ -72,7 +100,7 @@ class Spline(object):
         """
         plt.figure()
         if plot_control_poly:
-            plt.plot(self.ds[:, 0], self.ds[:, 1])
+            plt.plot(self.ds[:, 0], self.ds[:, 1], 'g', label='Control polygon')
 
         points = self.blossom()
         plt.plot(points[:, 0], points[:, 1], 'b--',
@@ -97,7 +125,8 @@ class Spline(object):
         Base case for deBoor's algorithm
         Note: returns 0 at endpoint when it should return 1.
         """
-        return (self.us[i] <= x) * (x < self.us[i + 1]) #+ (x == self.us[self.nbr_knots - 7])
+        # + (x == self.us[self.nbr_knots - 7])
+        return (self.us[i] <= x) * (x < self.us[i + 1])
 
     def N(self, us, i, x, n):
         """
@@ -179,12 +208,16 @@ class Spline(object):
 
     def blossom(self): 
         """
-        Runs the entire blossom algo for the given data at object creation.
-        Not memoized.
+        Runs the entire blossom algorithm for the given data at object creation.
+        deBoor points are saved as list items in the attribute `deBoor_points`.
         """
         grid = self.grid
         points = []
-        for i in np.arange(3, self.nbr_knots + 3):  #why 3 and + 3 ??? due to enpoints?
+
+        if self.deBoor_points:
+            self.deBoor_points = []  # erase previous deBoor points calculations
+
+        for i in np.arange(3, self.nbr_knots + 3):  # why 3 and + 3 ??? due to enpoints?
             ui0 = self.us[i]
             ui1 = self.us[i + 1]
             x = grid[(ui0 <= grid) & (grid <= ui1)]
@@ -196,7 +229,7 @@ class Spline(object):
 
         return np.array(points)
 
-    def eval_by_sum(self, u):
+    def eval_by_sum(self):
         """
         Needed for task 4. Evaluates the spline by using the sum approach
         instead of Blossoms algorithm.
@@ -214,15 +247,14 @@ class Spline(object):
             self.N3(self.us, i, grid, 3, memo)
             N[:, i] = memo[(i, 3)]
 
-        #print("N.shape = {}".format(N.shape))
-        #plt.figure("test")
-        #plt.plot(grid, N[:,-4])
+        # print("N.shape = {}".format(N.shape))
+        # plt.figure("test")
+        # plt.plot(grid, N[:,-4])
 
         # Calculate sum
         xs = np.dot(N, self.ds[:, 0])
         ys = np.dot(N, self.ds[:, 1])
-        
-        
+
         return (xs[:-1], ys[:-1]) 
 
 
@@ -242,7 +274,7 @@ def main():
 
     x = np.linspace(0, 1, 150)
     s = Spline(x, ds)
-    s.plot(plot_deBoor_points = True, plot_control_poly = True)
+    s.plot(plot_deBoor_points=True, plot_control_poly=True)
 
     # print(shape(x))
     # plt.plot(x, s.N(s.us, 1,x,3))
@@ -265,7 +297,7 @@ def main():
     """
 
     # Test eval_by_sum
-    xs, ys = s.eval_by_sum(s.us)
+    xs, ys = s.eval_by_sum()
     plt.plot(xs, ys)
     plt.show()
 
