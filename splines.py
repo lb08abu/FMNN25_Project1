@@ -23,6 +23,14 @@ class DValuesError(Exception):
 
 
 class Spline(object):
+    """
+    A class to represent 3rd order splines for a 2D control polygon.
+
+    This class has the main functions:
+      * __init__: Initialises the class and sets instance attributes.
+      * __call__: Returns the evaluation point at given point
+      * plot: 
+    """
     def __init__(self, grid, dvalues, degree=3):
         """
         Initiates all instance variables. 
