@@ -40,6 +40,9 @@ class Spline(object):
         self.us = grid[indices.astype(int)]
         self.us[-1] = grid[-1]  # Otherwise the end point might be excluded
 
+        # attribute for deBoor points
+        self.deBoor_points = []
+
         # Apparently the values of the knots can be arbitrary. 
         # The only thing that matters is that we have a enough of them.
 
@@ -60,12 +63,15 @@ class Spline(object):
             plt.plot(self.ds[:, 0], self.ds[:, 1])
 
         points = self.blossom()
-        plt.plot(points[:, 0], points[:, 1], 'b--')
+        plt.plot(points[:, 0], points[:, 1], 'b--',
+                 label='%s-order spline' % self.degree)
 
-        # if plot_deBoor_points:
-        #     plt.plot(points[0, 0], points[0, 1], 'r*')
-        #     plt.plot(points[-1, 0], points[-1, 1], 'r*')
+        if plot_deBoor_points:
+            dp = np.array(self.deBoor_points)
+            plt.scatter(dp[:, 0], dp[:, 1], c='r', marker='x',
+                        label='deBoor points')
 
+        plt.legend(loc='best')
         plt.show()
 
     def get_basis_func(self, us, i):  # needs checking
@@ -160,6 +166,10 @@ class Spline(object):
             x = grid[(ui0 <= grid) & (grid <= ui1)]
             points.extend(self.d(i, x.reshape(len(x), 1), 3))
 
+            if not self.deBoor_points:
+                self.deBoor_points.append(points[0])  # add first point
+            self.deBoor_points.append(points[-1])
+
         return np.array(points)
 
     def eval_by_sum(self, u):
@@ -207,9 +217,9 @@ def main():
             [  40,     20],
             [  40,     20]])
 
-    x = np.linspace(0,1,150)
+    x = np.linspace(0, 1, 150)
     s = Spline(x, ds)
-    s.plot()
+    s.plot(plot_deBoor_points=True)
 
     # print(shape(x))
     # plt.plot(x, s.N(s.us, 1,x,3))
