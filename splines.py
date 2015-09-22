@@ -23,22 +23,34 @@ class Spline(object):
         """
         Initiates all instance variables. 
         Calculates equidistant knot points.
+        Adds 3 copies at the start and end point of the control points and knot 
+        points.
         """
         # Set degree
-        self.degree = 3
+        self.degree     = 3
 
         # Save control points
-        self.ds = dvalues
-        self.nbr_ds = len(dvalues)
+        self.nbr_ds     = len(dvalues)
+        ds              = np.zeros((self.nbr_ds + 6, 2))
+        ds[3:-3, :]     = dvalues
+        ds[:3, :]       = ds[3, :]
+        ds[-3:, :]      = ds[-4, :]
+        self.ds         = ds
 
         # Find equidistant knot points
-        nbr_knots = self.degree + self.nbr_ds  # add 2 on each end
-        self.nbr_knots = nbr_knots
-        self.grid = grid
-        len_grid = len(grid)
-        indices = math.ceil(len_grid / nbr_knots) * np.arange(nbr_knots)
-        self.us = grid[indices.astype(int)]
-        self.us[-1] = grid[-1]  # Otherwise the end point might be excluded
+        nbr_knots       = self.degree + self.nbr_ds  # add 2 on each end
+        self.nbr_knots  = nbr_knots
+        self.grid       = grid
+        len_grid        = len(grid)
+        indices         = math.ceil(len_grid / nbr_knots) * np.arange(nbr_knots)
+
+        us              = np.zeros(self.nbr_knots +  6)
+        tmp             = grid[indices.astype(int)]
+        tmp[-1]         = grid[-1]
+        us[3:-3]        = tmp
+        us[:3]          = us[3]
+        us[-3:]         = us[-4]
+        self.us         = us
 
         # Apparently the values of the knots can be arbitrary. 
         # The only thing that matters is that we have a enough of them.
@@ -60,7 +72,7 @@ class Spline(object):
             plt.plot(self.ds[:, 0], self.ds[:, 1])
 
         points = self.blossom()
-        plt.plot(points[:, 0], points[:, 1], 'b--')
+        plt.plot(points[:, 0], points[:, 1], 'r')
 
         # if plot_deBoor_points:
         #     plt.plot(points[0, 0], points[0, 1], 'r*')
@@ -77,8 +89,9 @@ class Spline(object):
     def N0(self, us, i, x):
         """
         Base case for deBoor's algorithm
+        Note: returns 0 at endpoint when it should return 1.
         """
-        return (self.us[i] <= x) * (x < self.us[i + 1])
+        return (self.us[i] <= x) * (x < self.us[i + 1]) #+ (x == self.us[self.nbr_knots - 7])
 
     def N(self, us, i, x, n):
         """
@@ -128,8 +141,13 @@ class Spline(object):
             if (i, 0) not in memo:
                 memo[(i, 0)] = self.N0(us, i, x)
         else: 
-            c1 = (x - us[i]) / (us[i + n] - us[i])
-            c2 = (us[i + n + 1] - x) / (us[i + n + 1] - us[i + 1])
+
+            # Set 0/0 = 0. Be careful of infinity? (a.k.a. constant / 0)
+            with np.errstate(divide = 'ignore', invalid = 'ignore'):
+                c1 = (x - us[i]) / (us[i + n] - us[i])
+                c2 = (us[i + n + 1] - x) / (us[i + n + 1] - us[i + 1])
+                c1 = np.nan_to_num(c1)
+                c2 = np.nan_to_num(c2)
 
             if (i, n - 1) not in memo:
                 self.N3(us, i, x, n - 1, memo)
@@ -145,16 +163,22 @@ class Spline(object):
             return self.ds[i, :]
         else:
             us = self.us
-            a = (x - us[i]) / (us[i + self.degree + 1 - n] - us[i])
+
+            # Set 0/0 = 0. Be careful of infinity? (a.k.a. constant / 0)
+            with np.errstate(divide = 'ignore', invalid = 'ignore'):
+                a = (x - us[i]) / (us[i + self.degree + 1 - n] - us[i])
+                a = np.nan_to_num(a)
+            
             return (1 - a) * self.d(i - 1, x, n - 1) + a * self.d(i, x, n - 1)
 
-    def blossom(self):
+    def blossom(self): 
         """
         Runs the entire blossom algo for the given data at object creation.
+        Not memoized.
         """
         grid = self.grid
         points = []
-        for i in np.arange(3, self.nbr_knots - 3):  # Avoid the 3 dummy points
+        for i in np.arange(3, self.nbr_knots + 3):  #why 3 and + 3 ??? due to enpoints?
             ui0 = self.us[i]
             ui1 = self.us[i + 1]
             x = grid[(ui0 <= grid) & (grid <= ui1)]
@@ -165,92 +189,128 @@ class Spline(object):
     def eval_by_sum(self, u):
         """
         Needed for task 4. Evaluates the spline by using the sum approach
-        instead of Blossoms algorithm
+        instead of Blossoms algorithm.
+        Does not utilize bandedness yet.
+        Note: Does not return endpoint due to problem with the last basis function
         """
-        grid = self.grid # xi
-        nbr_ds = self.nbr_ds
+        grid    = self.grid 
+        nbr_ds  = self.nbr_ds
 
         # Calculate "vandermonde like" matrix
-        memo = {}
-        l_grid = len(grid)
-        N = np.zeros((l_grid, nbr_ds))
-        for i in np.arange(nbr_ds - 1): # -1 due to recursion i + 1 in N3?
+        memo    = {}
+        l_grid  = len(grid)
+        N       = np.zeros((l_grid, nbr_ds + 6 )) # OBS +6
+        for i in np.arange(nbr_ds + 5): # Correct indexing? Why + 5?
             self.N3(self.us, i, grid, 3, memo)
             N[:, i] = memo[(i, 3)]
 
+        #print("N.shape = {}".format(N.shape))
+        #plt.figure("test")
+        #plt.plot(grid, N[:,-4])
         # Calculate sum
+        #print(N[10:12,:])
         xs = np.dot(N, self.ds[:, 0])
         ys = np.dot(N, self.ds[:, 1])
         
-        # Possible solution? Throw away points
-        #xs = xs[20:-20]
-        #ys = ys[20:-20]
+        # print("N.shape = {}, self.ds.shape = {}".format(N.shape, self.ds.shape))
+        # p = 0
+        # q = -2
+        # xs = np.dot(N[:,p:q], self.ds[p:q, 0])
+        # ys = np.dot(N[:,p:q], self.ds[p:q, 1])
         
-        return (xs, ys)
+        return (xs[:-1], ys[:-1]) 
 
 
-def main():
-    plt.close("all")
-    ds = np.array([
-            [ -20,     10],
-            [ -20,     10],
-            [ -20,     10],
-            [ -50,     20],
-            [ -25,      5],
-            [-100,    -15],
-            [ -25,    -65],
-            [  10,    -80],
-            [  60,    -30],
-            [  10,     20],
-            [  20,      0],
-            [  40,     20],
-            [  40,     20],
-            [  40,     20]])
+plt.close("all")
+ds = np.array([ [ -20,   10],
+                [ -50,   20],
+                [ -25,    5],
+                [-100,  -15],
+                [ -25,  -65],
+                [  10,  -80],
+                [  60,  -30],
+                [  10,   20],
+                [  20,    0],
+                [  40,   20]])
 
-    x = np.linspace(0,1,150)
-    s = Spline(x, ds)
-    s.plot()
+x = np.linspace(0,1,150)
+s = Spline(x, ds)
+s.plot(1,1)
 
-    # print(shape(x))
-    # plt.plot(x, s.N(s.us, 1,x,3))
-    # plt.plot(x, s.N2(1,x,3,{})[(0,3)])
-    # memo = {}
-    # s.N3(1,x,3,memo)
-    # plt.plot(x, memo[(0,3)])
+# Test eval_by_sum
+xs, ys = s.eval_by_sum(s.us)
+plt.plot(xs, ys,'*')
+plt.show()
 
-    """
-    This test shows that:
-    N much slower than N2
-    a = np.arange(10)
-    s = splines(a, a)
-    %timeit t1 = s.N(0, x, 10) # 49.7 ms
-    %timeit t2 = s.N2(0, x, 10, {})[(0,10)] #2.24 ms
-    t3 = {}
-    %timeit s.N3(0, x, 10, t3) # 954 ns!
+# plt.figure()
+# t3 = {}
+# s.N3(s.us, 14, x, 3, t3)
+# a = t3[(14,3)]
+# a[-1] = 1
+# plt.plot(x, t3[(14,3)]) 
 
-    np.all(t1 == t2) * all(t1 == t3[(0,10)])
-    """
+# def main():
+#     plt.close("all")
+#     ds = np.array([
+#             [ -20,     10],
+#             [ -20,     10],
+#             [ -20,     10],
+#             [ -50,     20],
+#             [ -25,      5],
+#             [-100,    -15],
+#             [ -25,    -65],
+#             [  10,    -80],
+#             [  60,    -30],
+#             [  10,     20],
+#             [  20,      0],
+#             [  40,     20],
+#             [  40,     20],
+#             [  40,     20]])
 
-    # test d
-    # plt.figure()
-    # plt.plot(ds[:,0], ds[:,1])
+#     x = np.linspace(0,1,150)
+#     s = Spline(x, ds)
+#     s.plot()
 
-    # I = arange(3, 14)
-    # I_len = len(I)
+#     # print(shape(x))
+#     # plt.plot(x, s.N(s.us, 1,x,3))
+#     # plt.plot(x, s.N2(1,x,3,{})[(0,3)])
+#     # memo = {}
+#     # s.N3(1,x,3,memo)
+#     # plt.plot(x, memo[(0,3)])
 
-    # for i in I:
-    #     x = np.linspace(i, i + 1 ,100)
-    #     p = 3  # min(i, 3)
-    #     # p = min(min(i, 3), I_len - i - 2)
-    #     points = s.d(i, x, p)
-    #     # print("i = {}, p = {}, I_len - i = {}".format(i, p, I_len - i - 1))
-    #     plt.plot(points[:,0],points[:,1])
+#     """
+#     This test shows that:
+#     N much slower than N2
+#     a = np.arange(10)
+#     s = splines(a, a)
+#     %timeit t1 = s.N(0, x, 10) # 49.7 ms
+#     %timeit t2 = s.N2(0, x, 10, {})[(0,10)] #2.24 ms
+#     t3 = {}
+#     %timeit s.N3(0, x, 10, t3) # 954 ns!
 
-    # Test eval_by_sum
-    xs, ys = s.eval_by_sum(s.us)
-    plt.plot(xs, ys)
-    plt.show()
+#     np.all(t1 == t2) * all(t1 == t3[(0,10)])
+#     """
+
+#     # test d
+#     # plt.figure()
+#     # plt.plot(ds[:,0], ds[:,1])
+
+#     # I = arange(3, 14)
+#     # I_len = len(I)
+
+#     # for i in I:
+#     #     x = np.linspace(i, i + 1 ,100)
+#     #     p = 3  # min(i, 3)
+#     #     # p = min(min(i, 3), I_len - i - 2)
+#     #     points = s.d(i, x, p)
+#     #     # print("i = {}, p = {}, I_len - i = {}".format(i, p, I_len - i - 1))
+#     #     plt.plot(points[:,0],points[:,1])
+
+#     # Test eval_by_sum
+#     xs, ys = s.eval_by_sum(s.us)
+#     plt.plot(xs, ys)
+#     plt.show()
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
