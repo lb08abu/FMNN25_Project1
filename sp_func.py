@@ -78,17 +78,7 @@ def get_basis_func(knot_seq, j, n=3, max_cache=16):
 
 def main():
     pass
-    
 
-knots = [0, 0, 0, 0, 1, 2, 3, 4, 5, 5, 5]
-index = 1
-
-b = get_basis_func(knots, index)
-
-x = np.linspace(0, 5, 1000)
-b(x)
-plt.plot(x, b(x))
 
 if __name__ == '__main__':
-
     main()
