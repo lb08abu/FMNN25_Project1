@@ -83,7 +83,7 @@ class Spline(object):
         """
         plt.figure()
         if plot_control_poly:
-            plt.plot(self.ds[:, 0], self.ds[:, 1])
+            plt.plot(self.ds[:, 0], self.ds[:, 1], 'g', label='Control polygon')
 
         points = self.blossom()
         plt.plot(points[:, 0], points[:, 1], 'b--',
@@ -247,14 +247,7 @@ def main():
 
     x = np.linspace(0, 1, 150)
     s = Spline(x, ds)
-    s.plot(plot_deBoor_points=True)
-
-    # print(shape(x))
-    # plt.plot(x, s.N(s.us, 1,x,3))
-    # plt.plot(x, s.N2(1,x,3,{})[(0,3)])
-    # memo = {}
-    # s.N3(1,x,3,memo)
-    # plt.plot(x, memo[(0,3)])
+    s.plot(plot_control_poly=True, plot_deBoor_points=True)
 
     """
     This test shows that:
@@ -285,7 +278,7 @@ def main():
     #     plt.plot(points[:,0],points[:,1])
 
     # Test eval_by_sum
-    xs, ys = s.eval_by_sum(s.us)
+    xs, ys = s.eval_by_sum()
     plt.plot(xs, ys)
     plt.show()
 
