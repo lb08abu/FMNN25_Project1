@@ -52,6 +52,9 @@ class Spline(object):
         us[-3:]         = us[-4]
         self.us         = us
 
+        # attribute for deBoor points
+        self.deBoor_points = []
+
         # Apparently the values of the knots can be arbitrary. 
         # The only thing that matters is that we have a enough of them.
 
@@ -72,12 +75,15 @@ class Spline(object):
             plt.plot(self.ds[:, 0], self.ds[:, 1])
 
         points = self.blossom()
-        plt.plot(points[:, 0], points[:, 1], 'r')
+        plt.plot(points[:, 0], points[:, 1], 'b--',
+                 label='%s-order spline' % self.degree)
 
-        # if plot_deBoor_points:
-        #     plt.plot(points[0, 0], points[0, 1], 'r*')
-        #     plt.plot(points[-1, 0], points[-1, 1], 'r*')
+        if plot_deBoor_points:
+            dp = np.array(self.deBoor_points)
+            plt.scatter(dp[:, 0], dp[:, 1], c='r', marker='x',
+                        label='deBoor points')
 
+        plt.legend(loc='best')
         plt.show()
 
     def get_basis_func(self, us, i):  # needs checking
@@ -184,6 +190,10 @@ class Spline(object):
             x = grid[(ui0 <= grid) & (grid <= ui1)]
             points.extend(self.d(i, x.reshape(len(x), 1), 3))
 
+            if not self.deBoor_points:
+                self.deBoor_points.append(points[0])  # add first point
+            self.deBoor_points.append(points[-1])
+
         return np.array(points)
 
     def eval_by_sum(self, u):
@@ -207,22 +217,19 @@ class Spline(object):
         #print("N.shape = {}".format(N.shape))
         #plt.figure("test")
         #plt.plot(grid, N[:,-4])
+
         # Calculate sum
-        #print(N[10:12,:])
         xs = np.dot(N, self.ds[:, 0])
         ys = np.dot(N, self.ds[:, 1])
         
-        # print("N.shape = {}, self.ds.shape = {}".format(N.shape, self.ds.shape))
-        # p = 0
-        # q = -2
-        # xs = np.dot(N[:,p:q], self.ds[p:q, 0])
-        # ys = np.dot(N[:,p:q], self.ds[p:q, 1])
         
         return (xs[:-1], ys[:-1]) 
 
 
-plt.close("all")
-ds = np.array([ [ -20,   10],
+def main():
+    plt.close("all")
+    ds = np.array([ 
+                [ -20,   10],
                 [ -50,   20],
                 [ -25,    5],
                 [-100,  -15],
@@ -233,84 +240,35 @@ ds = np.array([ [ -20,   10],
                 [  20,    0],
                 [  40,   20]])
 
-x = np.linspace(0,1,150)
-s = Spline(x, ds)
-s.plot(1,1)
+    x = np.linspace(0, 1, 150)
+    s = Spline(x, ds)
+    s.plot(plot_deBoor_points = True, plot_control_poly = True)
 
-# Test eval_by_sum
-xs, ys = s.eval_by_sum(s.us)
-plt.plot(xs, ys,'*')
-plt.show()
+    # print(shape(x))
+    # plt.plot(x, s.N(s.us, 1,x,3))
+    # plt.plot(x, s.N2(1,x,3,{})[(0,3)])
+    # memo = {}
+    # s.N3(1,x,3,memo)
+    # plt.plot(x, memo[(0,3)])
 
-# plt.figure()
-# t3 = {}
-# s.N3(s.us, 14, x, 3, t3)
-# a = t3[(14,3)]
-# a[-1] = 1
-# plt.plot(x, t3[(14,3)]) 
+    """
+    This test shows that:
+    N much slower than N2
+    a = np.arange(10)
+    s = splines(a, a)
+    %timeit t1 = s.N(0, x, 10) # 49.7 ms
+    %timeit t2 = s.N2(0, x, 10, {})[(0,10)] #2.24 ms
+    t3 = {}
+    %timeit s.N3(0, x, 10, t3) # 954 ns!
 
-# def main():
-#     plt.close("all")
-#     ds = np.array([
-#             [ -20,     10],
-#             [ -20,     10],
-#             [ -20,     10],
-#             [ -50,     20],
-#             [ -25,      5],
-#             [-100,    -15],
-#             [ -25,    -65],
-#             [  10,    -80],
-#             [  60,    -30],
-#             [  10,     20],
-#             [  20,      0],
-#             [  40,     20],
-#             [  40,     20],
-#             [  40,     20]])
+    np.all(t1 == t2) * all(t1 == t3[(0,10)])
+    """
 
-#     x = np.linspace(0,1,150)
-#     s = Spline(x, ds)
-#     s.plot()
-
-#     # print(shape(x))
-#     # plt.plot(x, s.N(s.us, 1,x,3))
-#     # plt.plot(x, s.N2(1,x,3,{})[(0,3)])
-#     # memo = {}
-#     # s.N3(1,x,3,memo)
-#     # plt.plot(x, memo[(0,3)])
-
-#     """
-#     This test shows that:
-#     N much slower than N2
-#     a = np.arange(10)
-#     s = splines(a, a)
-#     %timeit t1 = s.N(0, x, 10) # 49.7 ms
-#     %timeit t2 = s.N2(0, x, 10, {})[(0,10)] #2.24 ms
-#     t3 = {}
-#     %timeit s.N3(0, x, 10, t3) # 954 ns!
-
-#     np.all(t1 == t2) * all(t1 == t3[(0,10)])
-#     """
-
-#     # test d
-#     # plt.figure()
-#     # plt.plot(ds[:,0], ds[:,1])
-
-#     # I = arange(3, 14)
-#     # I_len = len(I)
-
-#     # for i in I:
-#     #     x = np.linspace(i, i + 1 ,100)
-#     #     p = 3  # min(i, 3)
-#     #     # p = min(min(i, 3), I_len - i - 2)
-#     #     points = s.d(i, x, p)
-#     #     # print("i = {}, p = {}, I_len - i = {}".format(i, p, I_len - i - 1))
-#     #     plt.plot(points[:,0],points[:,1])
-
-#     # Test eval_by_sum
-#     xs, ys = s.eval_by_sum(s.us)
-#     plt.plot(xs, ys)
-#     plt.show()
+    # Test eval_by_sum
+    xs, ys = s.eval_by_sum(s.us)
+    plt.plot(xs, ys)
+    plt.show()
 
 
-# if __name__ == '__main__':
-#     main()
+if __name__ == '__main__':
+    main()
