@@ -15,17 +15,22 @@ from functools import partial
 import math
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy as sp
 
 
 class Spline(object):
-    def __init__(self, grid, dvalues):
+    def __init__(self, grid, dvalues, degree=3):
         """
         Initiates all instance variables. 
         Calculates equidistant knot points.
         """
+
+        if max(grid) > 1.0:
+            raise ValueError("grid values must be in range 0 to 1")
+        if min(grid) < 0.0:
+            raise ValueError("grid values must be in range 0 to 1")
+
         # Set degree
-        self.degree = 3
+        self.degree = degree
 
         # Save control points
         self.ds = dvalues
@@ -51,8 +56,7 @@ class Spline(object):
         This returns a point s(u) = [s_x(u) s_y(u)]
         """
         idx = self.us.searchsorted(u)
-        i = idx
-        return self.d(i, u, 3)
+        return self.d(idx, u, 3)
 
     def plot(self, plot_control_poly=False, plot_deBoor_points=False):
         """
@@ -156,13 +160,18 @@ class Spline(object):
 
     def blossom(self):
         """
-        Runs the entire blossom algo for the given data at object creation.
+        Runs the entire blossom algorithm for the given data at object creation.
+        deBoor points are saved as list items in the attribute `deBoor_points`.
         """
         grid = self.grid
         points = []
+
+        if self.deBoor_points:
+            self.deBoor_points = []  # erase previous deBoor points calculations
+
         for i in np.arange(3, self.nbr_knots - 3):  # Avoid the 3 dummy points
             ui0 = self.us[i]
-            ui1 = self.us[i + 1]
+            ui1 = self.us[i+1]
             x = grid[(ui0 <= grid) & (grid <= ui1)]
             points.extend(self.d(i, x.reshape(len(x), 1), 3))
 
@@ -172,19 +181,19 @@ class Spline(object):
 
         return np.array(points)
 
-    def eval_by_sum(self, u):
+    def eval_by_sum(self):
         """
         Needed for task 4. Evaluates the spline by using the sum approach
         instead of Blossoms algorithm
         """
-        grid = self.grid # xi
+        grid = self.grid  # xi
         nbr_ds = self.nbr_ds
 
         # Calculate "vandermonde like" matrix
         memo = {}
         l_grid = len(grid)
         N = np.zeros((l_grid, nbr_ds))
-        for i in np.arange(nbr_ds - 1): # -1 due to recursion i + 1 in N3?
+        for i in np.arange(nbr_ds - 1):  # -1 due to recursion i + 1 in N3?
             self.N3(self.us, i, grid, 3, memo)
             N[:, i] = memo[(i, 3)]
 
@@ -193,8 +202,8 @@ class Spline(object):
         ys = np.dot(N, self.ds[:, 1])
         
         # Possible solution? Throw away points
-        #xs = xs[20:-20]
-        #ys = ys[20:-20]
+        # xs = xs[20:-20]
+        # ys = ys[20:-20]
         
         return (xs, ys)
 
