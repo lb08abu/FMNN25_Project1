@@ -1,6 +1,8 @@
 """
-Test case for testing the Splines class.
+FMNN25 Project 1 - Splines
 
+test_splines.py
+Test case for testing the Splines class.
 Run by `nosetests`
 """
 

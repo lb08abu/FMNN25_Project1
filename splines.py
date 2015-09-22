@@ -1,12 +1,8 @@
 """
-Class to represent splines for 2D curve design.
+FMNN25 Project 1 - Splines
 
-To design a Spline we need:
- - Control points
- - Knots
- - Coefficients (one for each control point)
-
-Calculate all basis functions N^k_i(u)
+splines.py
+Contains the class and all supporting code for the class Spline.
 """
 
 from __future__ import division
@@ -18,16 +14,34 @@ import numpy as np
 
 
 class DValuesError(Exception):
+    """
+    Unique Exception for raising issues with the dvalues in Spline class.
+    """
     pass
 
 
 class Spline(object):
+    """
+    A class to represent 3rd order splines for a 2D control polygon.
+
+    This class has the main functions:
+      * __init__: Initialises the class and sets instance attributes.
+      * __call__: Returns the evaluation point at given point
+      * plot:
+    """
+
     def __init__(self, grid, dvalues, degree=3):
         """
-        Initiates all instance variables. 
-        Calculates equidistant knot points.
-        Adds 3 copies at the start and end point of the control points and knot 
-        points.
+        Initialization for the Spline class, the following parameters are
+        calculated:
+          * Number of knots
+          * Equidistant knot points
+          * Adds 3 copies at the start and end point of the control
+            points and knot points
+
+        :param grid: numpy.ndarray, grid points between which the intervals will
+            evaluated for the creation of the spline
+        :param dvalues: numpy.ndarray, polygon control points
         """
 
         if not isinstance(grid, np.ndarray):
@@ -88,7 +102,11 @@ class Spline(object):
 
     def __call__(self, u):
         """
-        This returns a point s(u) = [s_x(u) s_y(u)]
+        Calculate a point on the spline.
+
+        :param u: int/float, evaluation point
+        :return: numpy.ndarray, vector location in 2D space of the point `u`
+            on the spline
         """
         idx = self.us.searchsorted(u)
         i = idx
@@ -96,7 +114,10 @@ class Spline(object):
 
     def plot(self, plot_control_poly=False, plot_deBoor_points=False):
         """
-        Plots the whole spline
+        Plots the entire spline for the data passed in at instance creation.
+
+        :param plot_control_poly: bool, True for plotting the control polygon
+        :param plot_deBoor_points: bool, True to plot the deBoor points
         """
         plt.figure()
         if plot_control_poly:
@@ -114,24 +135,30 @@ class Spline(object):
         plt.legend(loc='best')
         plt.show()
 
-    def get_basis_func(self, us, i):  # needs checking
-        """
-        Task 3
-        """
-        return partial(self.N3, us=us, i=i)
-
     def N0(self, us, i, x):
         """
-        Base case for deBoor's algorithm
+        Base case for deBoor's algorithm.
         Note: returns 0 at endpoint when it should return 1.
+
+        :param us: numpy.ndarray, values of `u` (not currently used, the object
+            attribute self.us is used instead)
+        :param i: int, index of `us` (essentially the start of 'hot interval'?)
+        :param x: int/float, threshold for 'hot interval'
+        :return: basis function evaluation at N_0
         """
-        # + (x == self.us[self.nbr_knots - 7])
         return (self.us[i] <= x) * (x < self.us[i + 1])
 
     def N(self, us, i, x, n):
         """
-        deBoor's algorithm for finding basis functions. 
-        Not memoized
+        Recursive evaluation of the basis function for interval `x` in `us`
+        for the power `n`. Note that this is the most inefficient of the given
+        algorithms in this class, memoized methods are given in N2 and N3.
+
+        :param us: numpy.ndarray, interval of u's to be evaluated
+        :param i: int, index of `us` for which the 'hot interval' starts
+        :param x: int/float, threshold for 'hot interval'
+        :param n: int, order of the basis function
+        :return: evaluation of basis function of order `n`
         """
         if n == 0:
             return self.N0(us, i, x)
@@ -142,12 +169,18 @@ class Spline(object):
 
     def N2(self, us, i, x, n, memo): 
         """
-        deBoor's algorithm for finding basis functions. 
-        Memoized. Stores previous calculations in a dictionary. 
-        The function returns a new dictionary at every return. 
-        This is avoided in N3
+        Same as `Spline.N` but in a memoized form. Stores previous calculations
+        in a dictionary.
 
-        memoized, returns new dictionaries all the time
+        Note: The function returns a new dictionary at every return. This is
+        avoided in N3.
+
+        :param us: numpy.ndarray, interval of u's to be evaluated
+        :param i: int, index of `us` for which the 'hot interval' starts
+        :param x: int/float, threshold for 'hot interval'
+        :param n: int, order of the basis function
+        :param memo: dict, memoization dictionary
+        :return: evaluation of basis function of order `n`
         """
         if n == 0:
             if (i, 0) not in memo:
@@ -167,10 +200,17 @@ class Spline(object):
 
     def N3(self, us, i, x, n, memo): 
         """
-        deBoor's algorithm for finding basis functions. 
-        Memoized. Stores previous calculations in a dictionary. 
+        Same as `Spline.N` but in a memoized form. Stores previous calculations
+        in a dictionary.
         The function utilizes that the dictonary object is mutable.
         Hence it has no return value.
+
+        :param us: numpy.ndarray, interval of u's to be evaluated
+        :param i: int, index of `us` for which the 'hot interval' starts
+        :param x: int/float, threshold for 'hot interval'
+        :param n: int, order of the basis function
+        :param memo: dict, memoization dictionary
+        :return: None, all results are stored in the dictionary `memo`
         """
         if n == 0:
             if (i, 0) not in memo:
@@ -190,9 +230,15 @@ class Spline(object):
             self.N3(us, i + 1, x, n - 1, memo)
             memo[(i, n)] = c1 * memo[(i, n - 1)] + c2 * memo[(i + 1, n - 1)]
 
-    def d(self, i, x, n): 
+    def d(self, i, x, n):
         """
-        Blossom algorithm. Not memoized.
+        Recursively runs the blossom algorithm for a given data interval x.
+
+        :param i: int, index of `us` (essentially the start of 'hot interval'?)
+        :param x: int/float, threshold for 'hot interval'
+        :param n: Order of blossom, note we return self.ds[i, :] if n == 0
+            (this is the base case of the recursive function)
+        :return: Evaluated points along x
         """
         if n == 0:
             return self.ds[i, :]
@@ -206,10 +252,13 @@ class Spline(object):
             
             return (1 - a) * self.d(i - 1, x, n - 1) + a * self.d(i, x, n - 1)
 
-    def blossom(self): 
+    def blossom(self):
         """
-        Runs the entire blossom algorithm for the given data at object creation.
+        Runs the entire blossom algorithm for all data points based on the
+        given data at object instantiation.
         deBoor points are saved as list items in the attribute `deBoor_points`.
+
+        :return: Evaluated 3rd order spline for all points
         """
         grid = self.grid
         points = []
@@ -227,37 +276,32 @@ class Spline(object):
                 self.deBoor_points.append(points[0])  # add first point
             self.deBoor_points.append(points[-1])
         x = np.array(points)
-        print(x.shape)
+        # print(x.shape)
         return x
 
     def eval_by_sum(self):
         """
-        Needed for task 4. Evaluates the spline by using the sum approach
-        instead of Blossoms algorithm.
-        Does not utilize bandedness yet.
-        Note: Does not return endpoint due to problem with the last basis function
+        Evaluates the spline by using the sum of the basis functions instead
+        of the blossoms algorithm.
+
+        :return: Evaluated 3rd order spline for all points
         """
-        grid    = self.grid 
-        nbr_ds  = self.nbr_ds
+        grid = self.grid
+        nbr_ds = self.nbr_ds
 
         # Calculate "vandermonde like" matrix
-        memo    = {}
-        l_grid  = len(grid)
-        N       = np.zeros((l_grid, nbr_ds + 6))  # OBS +6
+        memo = {}
+        l_grid = len(grid)
+        N = np.zeros((l_grid, nbr_ds + 6))  # OBS +6
         for i in np.arange(nbr_ds + 5):  # Correct indexing? Why + 5?
             self.N3(self.us, i, grid, 3, memo)
             N[:, i] = memo[(i, 3)]
-
-        # print("N.shape = {}".format(N.shape))
-        # plt.figure("test")
-        # plt.plot(grid, N[:,-4])
 
         # Calculate sum
         xs = np.dot(N, self.ds[:, 0])
         ys = np.dot(N, self.ds[:, 1])
 
         x = np.array((xs[:-1], ys[:-1])).T
-        print(x.shape)
         return x
 
 
