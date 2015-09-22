@@ -3,7 +3,7 @@ FMNN25 Project 1 - Splines
 
 test_splines.py
 Test case for testing the Splines class.
-Run by `nosetests`
+Execute by running `nosetests` from the command line in the parent directory.
 """
 
 import unittest
@@ -64,6 +64,11 @@ class SplinesTestCase(unittest.TestCase):
                           [1, 2, 3, 4])
 
     def test_deBoor_vs_blossom(self):
+        """
+        Test that the returned array from blossoms is the same as from
+        the deBoor algorithm (it currently isn't so it seems that our
+        implementation is wrong somewhere...)
+        """
         ds = np.array([
                 [ -20,     10],
                 [ -50,     20],

@@ -6,8 +6,6 @@ Contains the class and all supporting code for the class Spline.
 """
 
 from __future__ import division
-from functools import partial
-
 import math
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,7 +25,7 @@ class Spline(object):
     This class has the main functions:
       * __init__: Initialises the class and sets instance attributes.
       * __call__: Returns the evaluation point at given point
-      * plot:
+      * plot: plots the evaluated spline using the blossoms algorithm
     """
 
     def __init__(self, grid, dvalues, degree=3):
@@ -133,6 +131,9 @@ class Spline(object):
             plt.scatter(dp[:, 0], dp[:, 1], c='r', marker='x',
                         label='deBoor points')
 
+        plt.title("Spline created by blossom algorithm")
+        plt.xlabel("x")
+        plt.ylabel("y")
         plt.legend(loc='best')
         plt.show()
 
@@ -304,51 +305,3 @@ class Spline(object):
 
         x = np.array((xs[:-1], ys[:-1])).T
         return x
-
-
-def main():
-    plt.close("all")
-    ds = np.array([
-                [ -20,   10],
-                [ -50,   20],
-                [ -25,    5],
-                [-100,  -15],
-                [ -25,  -65],
-                [  10,  -80],
-                [  60,  -30],
-                [  10,   20],
-                [  20,    0],
-                [  40,   20]])
-
-    x = np.linspace(0, 1, 150)
-    s = Spline(x, ds)
-    s.plot(plot_deBoor_points=True, plot_control_poly=True)
-
-    # print(shape(x))
-    # plt.plot(x, s.N(s.us, 1,x,3))
-    # plt.plot(x, s.N2(1,x,3,{})[(0,3)])
-    # memo = {}
-    # s.N3(1,x,3,memo)
-    # plt.plot(x, memo[(0,3)])
-
-    """
-    This test shows that:
-    N much slower than N2
-    a = np.arange(10)
-    s = splines(a, a)
-    %timeit t1 = s.N(0, x, 10) # 49.7 ms
-    %timeit t2 = s.N2(0, x, 10, {})[(0,10)] #2.24 ms
-    t3 = {}
-    %timeit s.N3(0, x, 10, t3) # 954 ns!
-
-    np.all(t1 == t2) * all(t1 == t3[(0,10)])
-    """
-
-    # Test eval_by_sum
-    ys = s.eval_by_sum()
-    plt.plot(ys[:, 0], ys[:, 1])
-    plt.show()
-
-
-if __name__ == '__main__':
-    main()

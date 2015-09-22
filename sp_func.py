@@ -1,13 +1,21 @@
-import numpy as np
-import matplotlib.pyplot as plt
+"""
+FMNN25 Project 1 - Splines
+
+sp_func.py
+Contains functions for creating basis functions, also using optimisation.
+"""
+
 import collections
+import numpy as np
 
 
 class memoized:
-    '''Decorator. Caches a function's return value each time it is called.
+    """
+    Decorator. Caches a function's return value each time it is called.
     If called later with the same arguments, the cached value is returned
     (not reevaluated).
-    '''
+    """
+
     def __init__(self, func):
         self.func = func
         self.cache = {}
@@ -30,10 +38,10 @@ def get_basis_func(knot_seq, j, n=3):
     """
     Return the basis function N^n_j for the knot sequence argument.
 
-    Args:
-        knot_seq: Knot sequence.
-        j: index
-        n: Optional argument. Degree of spline. (default=3)
+    :param knot_seq: list/numpy.ndarray, knot sequence
+    :param j: int, index
+    :param n: int, Optional argument. Degree of spline. (default=3)
+    :return: callable, basis function to calculate basis N^n_j
     """
 
     @memoized  # Memoizes function.
@@ -66,15 +74,3 @@ def get_basis_func(knot_seq, j, n=3):
         return N(x, n, j)
 
     return basis_func
-
-
-if __name__ == '__main__':
-    knots = [0, 0, 0, 0, 1, 2, 3, 4, 4, 4, 4]
-    nknots = len(knots)
-    fs = [get_basis_func(knots, j) for j in range(nknots - 4)]
-    x = np.linspace(0., 4-1e-9, 1000)
-    fxs = [f(x) for f in fs]
-    for i, fx in enumerate(fxs):
-        plt.plot(x, fx, label='$N^3_{0}$'.format(i))
-    # plt.legend()
-    plt.show()
