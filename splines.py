@@ -142,15 +142,23 @@ class Spline(object):
 
         :param us: numpy.ndarray, values of `u` (not currently used, the object
             attribute self.us is used instead)
-        :param i: int, index of `us` (essentially the 'hot interval'?)
-        :param x: numpy.ndarray, evaluation points
+        :param i: int, index of `us` (essentially the start of 'hot interval'?)
+        :param x: int/float, threshold for 'hot interval'
+        :return: basis function evaluation at N_0
         """
         return (self.us[i] <= x) * (x < self.us[i + 1])
 
     def N(self, us, i, x, n):
         """
-        deBoor's algorithm for finding basis functions. 
-        Not memoized
+        Recursive evaluation of the basis function for interval `x` in `us`
+        for the power `n`. Note that this is the most inefficient of the given
+        algorithms in this class, memoized methods are given in N2 and N3.
+
+        :param us: numpy.ndarray, interval of u's to be evaluated
+        :param i: int, index of `us` for which the 'hot interval' starts
+        :param x: int/float, threshold for 'hot interval'
+        :param n: int, order of the basis function
+        :return: evaluation of basis function of order `n`
         """
         if n == 0:
             return self.N0(us, i, x)
@@ -161,12 +169,18 @@ class Spline(object):
 
     def N2(self, us, i, x, n, memo): 
         """
-        deBoor's algorithm for finding basis functions. 
-        Memoized. Stores previous calculations in a dictionary. 
-        The function returns a new dictionary at every return. 
-        This is avoided in N3
+        Same as `Spline.N` but in a memoized form. Stores previous calculations
+        in a dictionary.
 
-        memoized, returns new dictionaries all the time
+        Note: The function returns a new dictionary at every return. This is
+        avoided in N3.
+
+        :param us: numpy.ndarray, interval of u's to be evaluated
+        :param i: int, index of `us` for which the 'hot interval' starts
+        :param x: int/float, threshold for 'hot interval'
+        :param n: int, order of the basis function
+        :param memo: dict, memoization dictionary
+        :return: evaluation of basis function of order `n`
         """
         if n == 0:
             if (i, 0) not in memo:
@@ -186,10 +200,17 @@ class Spline(object):
 
     def N3(self, us, i, x, n, memo): 
         """
-        deBoor's algorithm for finding basis functions. 
-        Memoized. Stores previous calculations in a dictionary. 
+        Same as `Spline.N` but in a memoized form. Stores previous calculations
+        in a dictionary.
         The function utilizes that the dictonary object is mutable.
         Hence it has no return value.
+
+        :param us: numpy.ndarray, interval of u's to be evaluated
+        :param i: int, index of `us` for which the 'hot interval' starts
+        :param x: int/float, threshold for 'hot interval'
+        :param n: int, order of the basis function
+        :param memo: dict, memoization dictionary
+        :return: None, all results are stored in the dictionary `memo`
         """
         if n == 0:
             if (i, 0) not in memo:
@@ -213,8 +234,8 @@ class Spline(object):
         """
         Recursively runs the blossom algorithm for a given data interval x.
 
-        :param i: Index
-        :param x: Interval of evaluation
+        :param i: int, index of `us` (essentially the start of 'hot interval'?)
+        :param x: int/float, threshold for 'hot interval'
         :param n: Order of blossom, note we return self.ds[i, :] if n == 0
             (this is the base case of the recursive function)
         :return: Evaluated points along x
