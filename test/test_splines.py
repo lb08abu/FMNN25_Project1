@@ -4,6 +4,11 @@ FMNN25 Project 1 - Splines
 test_splines.py
 Test case for testing the Splines class.
 Execute by running `nosetests` from the command line in the parent directory.
+
+Contributors:
+Lewis Belcher
+Angelos Toytziaridis
+Simon Ydman
 """
 
 import unittest

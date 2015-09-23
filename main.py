@@ -3,6 +3,11 @@ FMNN25 Project 1 - Splines
 
 main.py
 Runs demo code to show functionality of splines.py
+
+Contributors:
+Lewis Belcher
+Angelos Toytziaridis
+Simon Ydman
 """
 
 import matplotlib.pyplot as plt

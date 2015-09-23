@@ -3,6 +3,11 @@ FMNN25 Project 1 - Splines
 
 splines.py
 Contains the class and all supporting code for the class Spline.
+
+Contributors:
+Lewis Belcher
+Angelos Toytziaridis
+Simon Ydman
 """
 
 from __future__ import division

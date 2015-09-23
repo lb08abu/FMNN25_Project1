@@ -3,6 +3,11 @@ FMNN25 Project 1 - Splines
 
 sp_func.py
 Contains functions for creating basis functions, also using optimisation.
+
+Contributors:
+Lewis Belcher
+Angelos Toytziaridis
+Simon Ydman
 """
 
 import collections
